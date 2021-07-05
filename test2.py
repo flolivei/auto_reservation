@@ -51,6 +51,7 @@ for i in occupancy:
       print(f'Index: {index}')
       print(f'Index - 1: {index-1}')
       time_for_none = datetime.datetime.strptime(i['free_slots'][index-1],'%H:%M') #falta acresecentar 30min
+      #considerar funcao recursiva 
       #i['free_slot'][index-1]
       print(time_for_none)
       #i['free_slot'][index] = time_for_none
