@@ -20,15 +20,32 @@ soup = BeautifulSoup(page_source, 'lxml')
 
 occupancy = []
 courts = soup.find('div', class_ = 'club-container').find_all('div', class_ = 'court-container')
+#list for padel courts. 
+padel_courts = []
 for court in courts:
- 
   free = []
   occupied = []
-  name = court.find('div', class_ = 'court-info').h3.text
-  name = name.lower()
-
+  #finds court name and lower case it
+  name = court.find('div', class_ = 'court-info').h3.text.lower()
+  #list for slot and status. Will contain dictionaries
+  slot_status_pair = []
+  #finds courts with "padel" in the name, then finds all the slots
   if "padel" in name:
-    free_slots = court.find('div', class_ = 'slot-container').find_all('a', onclick=True)
+    all_slots = court.find('div', class_ = 'slot-container').find_all('a')
+    #for each slot, checks for "onclick" attribute
+    for slot in all_slots:
+      if 'onclick' in slot.attrs:
+        try:  #if onclick attribute tries to find text in child p
+          if slot.p.text:
+            slot_status_pair.append({'time' : slot.p.text, 'status' : 'free'})  # if child p with text, appends a dictionary with time and status of that slot
+        except: #if there's no text in child p, appends a dictionary with "none" for the time
+          slot_status_pair.append({'time' : 'none', 'status' : 'free'}) #TODO try to add time to none at this stage by going to previous index
+      else: #if there's no "onclick" attribute means that the slot is occupied 
+        slot_status_pair.append({'time' : slot.p.text, 'status' : 'occupied'}) #appends a dictionary for the occupied
+    padel_courts.append({'name' : name, 'schedule' : slot_status_pair}) # appends another court with it's schedule to the initial list of courts
+
+print(padel_courts)
+"""    free_slots = court.find('div', class_ = 'slot-container').find_all('a', onclick=True)
     for slot in free_slots:
       try:
         if slot.p.text:
@@ -45,21 +62,23 @@ for court in courts:
         occupied.append('none')
     occupancy.append({'court' : name, 'free_slots' : free, 'occ_slots' : occupied})
 
+print(occupancy)
+
 for i in occupancy:
   for index, slot in enumerate(i['free_slots']):
     if slot == 'none':
-      print(f'Index: {index}')
-      print(f'Index - 1: {index-1}')
-      time_for_none = datetime.datetime.strptime(i['free_slots'][index-1],'%H:%M') #falta acresecentar 30min
+      time_for_none = datetime.datetime.strptime(i['free_slots'][index-1],'%H:%M') + datetime.timedelta(minutes=30)  #falta acresecentar 30min
+      i['free_slots'][index] = time_for_none.strftime("%H:%M")
       #considerar funcao recursiva 
       #i['free_slot'][index-1]
-      print(time_for_none)
       #i['free_slot'][index] = time_for_none
 
 
 
 
-print(occupancy)
+
+
+print(occupancy)"""
 
 
 #html_text = requests.get('https://www.aircourts.com/').text
