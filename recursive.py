@@ -8,4 +8,5 @@ def factorial(x):
 
 num = 3
 
+
 print(f"Factorial of {num}, is {factorial(num)}")
