@@ -1,3 +1,5 @@
+import unidecode
+
 def factorial(x):
   """recursive function to find the factorial of an integer"""
 
@@ -7,6 +9,7 @@ def factorial(x):
     return (x * factorial(x-1))
 
 num = 3
-
-
-print(f"Factorial of {num}, is {factorial(num)}")
+text = "flávio"
+print(text)
+print(unidecode.unidecode(text))
+#print(f"Factorial of {num}, is {factorial(num)}")
