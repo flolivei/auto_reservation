@@ -95,11 +95,6 @@ for i in occupancy:
       #i['free_slot'][index-1]
       #i['free_slot'][index] = time_for_none
 
-
-
-
-
-
 print(occupancy)"""
 
 

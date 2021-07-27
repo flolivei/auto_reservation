@@ -1,0 +1,42 @@
+CREATE TABLE club(
+  id INTEGER NOT NULL, 
+  name TEXT NOT NULL, 
+  PRIMARY KEY(id));
+
+CREATE TABLE sport(
+  id INTEGER NOT NULL, 
+  name TEXT NOT NULL, 
+  PRIMARY KEY(id));
+
+CREATE TABLE resource(
+  id INTEGER NOT NULL, 
+  club_id INTEGER NOT NULL, 
+  sport_id INTEGER NOT NULL, 
+  name TEXT NOT NULL, 
+  PRIMARY KEY(id), 
+  FOREIGN KEY(club_id) REFERENCES club(id),
+  FOREIGN KEY(sport_id) REFERENCES sport(id));
+
+CREATE TABLE occupancy(
+  id INTEGER NOT NULL,
+  slot TEXT NOT NULL,
+  status TEXT NOT NULL,
+  time_checked  
+  date_id INTEGER NOT NULL,
+  sport_code INTEGER, 
+  name TEXT, 
+  PRIMARY KEY(resource_code), 
+  FOREIGN KEY(club_code) REFERENCES club(club_code),
+  FOREIGN KEY(sport_code) REFERENCES sport(id));
+
+CREATE TABLE date(
+  club_code INTEGER, 
+  resource_code INTEGER, 
+  sport_code INTEGER, 
+  name TEXT, 
+  PRIMARY KEY(resource_code), 
+  FOREIGN KEY(club_code) REFERENCES club(club_code),
+  FOREIGN KEY(sport_code) REFERENCES sport(id));
+
+SELECT * FROM club_resource WHERE sport_code = (
+  SELECT id FROM sport WHERE name='padel');
