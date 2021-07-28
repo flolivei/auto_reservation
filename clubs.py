@@ -35,7 +35,7 @@ try:
     record = cursor.fetchall()
     print("SQLite Database Version is: ", record)
     cursor.close()
-
+s
 except sqlite3.Error as error:
     print("Error while connecting to sqlite", error)
 finally:
