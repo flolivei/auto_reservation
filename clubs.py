@@ -27,33 +27,136 @@ def create_connection(db_file):
     
     return conn
 
-def create_club(conn, club):
-    """ create a new club into the clubs table
+def sport_insert(conn, values):
+    """ create a new sport into the sports table
     :param conn:
-    :param club:
-    :return: club id
+    :param sport:
+    :return: sport id
     """
-    sql = '''INSERT INTO club (id, name) VALUES (?, ?)'''
+    sport_check = 'SELECT * FROM sports WHERE code = ? AND name = ?'
+    insert_sport = '''INSERT INTO sports (code, name) VALUES (?, ?)'''  
+    
+    cursor = conn.cursor()
+    cursor.execute(sport_check, values)
+    if not cursor.fetchall():
+        cursor.execute(insert_sport, values)
+    
+    conn.commit()
+    cursor.close()
+    return cursor.lastrowid
+
+def location_insert(conn, values):
+    """ create a new sport into the sports table
+    :param conn:
+    :param sport:
+    :return: sport id
+    """
+    locations_check = 'SELECT * FROM locations WHERE code = ? AND name = ?'
+    insert_location = '''INSERT INTO locations (code, name) VALUES (?, ?)'''  
+    
+    cursor = conn.cursor()
+    cursor.execute(locations_check, values)
+    if not cursor.fetchall():
+        cursor.execute(insert_location, values)
+
+    conn.commit()
+    cursor.close()
+    return cursor.lastrowid
+
+def verification_insert(conn, date):
+    insert_verification = 'INSERT INTO verifications (day, month, year, time) VALUES (?, ?, ?, ?)'
+    day = date.day
+    month = date.month
+    year = date.year
+    time = f'{date.hour}:{date.minute}:{date.microsecond}'
+    values = (day, month, year, time)
+    cursor = conn.cursor()
+    cursor.execute(insert_verification, values)
+    conn.commit()
+    cursor.close()
+    return cursor.lastrowid
+
+def sports_verification(conn, verif_id, values):
+    check_sport = 'SELECT id FROM sports WHERE code = ? AND name = ?'
+    insert_sports_verification = 'INSERT INTO sports_verif (sports_id, verif_id) VALUES (?, ?)'
 
     cursor = conn.cursor()
-    cursor.execute(sql, club)
+    cursor.execute(check_sport, values)
+    retrieved_list = cursor.fetchall()
+
+    if len(retrieved_list) != 1:
+        print('ERROR')
+    else:
+        sport_id = retrieved_list[0][0]
+        ids_to_insert = (sport_id, verif_id)
+        cursor = conn.cursor()
+        cursor.execute(insert_sports_verification, ids_to_insert)
+        
     conn.commit()
+    cursor.close()
     return cursor.lastrowid
+
+def locations_verification(conn, verif_id, values):
+    check_location = 'SELECT id FROM locations WHERE code = ? AND name = ?'
+    insert_locations_verification = 'INSERT INTO loc_verif (loc_id, verif_id) VALUES (?, ?)'
+
+    cursor = conn.cursor()
+    cursor.execute(check_location, values)
+    retrieved_list = cursor.fetchall()
+
+    if len(retrieved_list) != 1:
+        print('ERROR')
+    else:
+        location_id = retrieved_list[0][0]
+        ids_to_insert = (location_id, verif_id)
+        cursor = conn.cursor()
+        cursor.execute(insert_locations_verification, ids_to_insert)
+        
+    conn.commit()
+    cursor.close()
+    return cursor.lastrowid
+
+def call_sport_city(conn, sport, location):
+    sport_select = 'SELECT code FROM sports WHERE name = (?)'
+    location_select = 'SELECT code FROM locations WHERE name = (?)'
+
+    cursor = conn.cursor()
+    cursor.execute(sport_select, sport)
+    retrieved_list = cursor.fetchall()
+    sport_code = retrieved_list[0][0]
+    cursor.execute(location_select, location)
+    retrieved_list = cursor.fetchall()
+    location_code = retrieved_list[0][0]
+
+    cursor.close()
+    return (sport_code, location_code)
+
+
+
+
+
+
+
 
 driver = Chrome(executable_path='C:\\Users\\flolivei\\Documents\\chromedriver.exe')
 driver.get("https://www.aircourts.com/index.php/")
 location = WebDriverWait(driver, 10).until(lambda x: x.find_element(By.ID, "location"))
 
+date = datetime.datetime.utcnow()
 page_source = driver.page_source
 soup = BeautifulSoup(page_source, 'lxml')
 
 sports_extract = soup.find('select', id = 'sport').find_all('option', class_ = 'ac-translate')
 locations_extract = soup.find('select', id = 'location').find_all('option', class_ = 'ac-translate')
 
+list_code_sport = []
 for sport_extract in sports_extract:
-  sport = {'code' : sport_extract['value'],
+    list_code_sport.append(
+        {'code' : sport_extract['value'],
         'sport' : sport_extract.get_text()}
-  print(sport)
+    )
+    
+print(list_code_sport)
 
 
 database = r"C:\Users\flolivei\Documents\GitHub\auto_reservation\sports_freq.db"
@@ -61,15 +164,36 @@ database = r"C:\Users\flolivei\Documents\GitHub\auto_reservation\sports_freq.db"
 # creates a database connection
 conn = create_connection(database)
 
+
+list_for_test = [{'code': '3', 'sport': 'Ténis'}, {'code': '1', 'sport': 'Futebol 5'}, {'code': '6', 'sport': 'Futsal'}, {'code': '2', 'sport': 'Futebol 7'}, {'code': '12', 'sport': 'Padbol'}, {'code': '14', 'sport': 'Squash'}, {'code': '8', 'sport': 'Basquetebol'}, {'code': '9', 'sport': 'Andebol'}, {'code': '10', 'sport': 'Voleibol'}, {'code': '22', 'sport': 'Teqball'}, {'code': '5', 'sport': 'Futebol 11'}, {'code': '13', 'sport': 'Bubble Football'}, {'code': '15', 'sport': 'Rugby'}, {'code': '17', 'sport': 'Futebol 5 Tabelas'}, {'code': '18', 'sport': 'Golf'}, {'code': '19', 'sport': 'Ténis de Praia'}, {'code': 
+'20', 'sport': 'Pistas Atletismo'}, {'code': '21', 'sport': 'Futevolei'}, {'code': '16', 'sport': 'Salas de Desporto'}, {'code': '23', 'sport': 'Futeténis'}, {'code': '24', 'sport': 'Natação'}, {'code': '25', 'sport': 'Ténis de mesa'}, {'code': '26', 'sport': 'Hóquei em Patins'}, {'code': '27', 'sport': 'Patinagem artística'}]
 with conn:
+
+    verif_id = verification_insert(conn, date)
+
     for sport_extract in sports_extract:
-        club = (sport_extract["value"], sport_extract.get_text())
-        id = create_club(conn, club)
-        print(id)
+        code = sport_extract['value']
+        name = sport_extract.get_text()
+        row_values = (code, name)
+        sport_id = sport_insert(conn, row_values)
+        sports_verification(conn, verif_id, row_values)
+
+
+    for location_extract in locations_extract:
+        code = location_extract['value']
+        name = location_extract.get_text()
+        row_values = (code, name)
+        location_id = location_insert(conn, row_values)
+        locations_verification(conn, verif_id, row_values)
+
+    sport_city_ids = call_sport_city(conn, ("Padel",), ("Grande Lisboa",))
+    print(sport_city_ids)
+    
 
 if conn: 
     conn.close()
     print("The SQLite connection is closed")
+
 
 
 #print(locations)

@@ -38,5 +38,85 @@ CREATE TABLE date(
   FOREIGN KEY(club_code) REFERENCES club(club_code),
   FOREIGN KEY(sport_code) REFERENCES sport(id));
 
+CREATE TABLE IF NOT EXISTS sports(
+	id INTEGER PRIMARY KEY,
+	name TEXT NOT NULL,
+	date TEXT NOT NULL,
+	status INTEGER NOT NULL 
+);
+
+CREATE TABLE IF NOT EXISTS sports(
+	id INTEGER PRIMARY KEY,
+  code INTEGER NOT NULL,
+	name TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS locations(
+	id INTEGER PRIMARY KEY,
+  code INTEGER NOT NULL,
+	name TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS verifications(
+	id INTEGER PRIMARY KEY,
+  day INTEGET NOT NULL,
+  month INTEGET NOT NULL,
+  year INTEGET NOT NULL,
+	time TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS loc_verif(
+	id INTEGER PRIMARY KEY,
+  loc_id INTEGER,
+  verif_id INTEGER,
+	FOREIGN KEY(loc_id) REFERENCES locations(id),
+  FOREIGN KEY(verif_id) REFERENCES verifications(id)
+);
+
+CREATE TABLE IF NOT EXISTS sports_verif(
+	id INTEGER PRIMARY KEY,
+  sports_id INTEGER,
+  verif_id INTEGER,
+	FOREIGN KEY(sports_id) REFERENCES sports(id),
+  FOREIGN KEY(verif_id) REFERENCES verifications(id)
+);
+
 SELECT * FROM club_resource WHERE sport_code = (
   SELECT id FROM sport WHERE name='padel');
+
+
+      for item in web_list:
+        f_web_name = False
+        id = item['code']
+        name = item["sport"]
+        for sport in db_sports_list:
+            if sport[1] == name:
+                f_web_name = True
+                if sport[3] == 'OFF':
+                    cursor.execute('UPDATE sports SET status = ? WHERE name = ?', ("ON", sport[1]))
+
+        if not f_web_name:
+            cursor.execute(sql_for_create, (id, name, date, "ON")) # (..., ..., ..., ...) tuple as argument for funtion
+    
+    for sport in db_sports_list:
+        f_db_name = False
+        for item in web_list:
+            name = item["sport"]
+            if name == sport[1]:
+                f_db_name = True
+        if not f_db_name:
+            cursor.execute(sql_for_update, ("OFF", sport[1]))
+
+
+SELECT name, day, month, year, time FROM sports s JOIN sports_verif sv ON s.id = sv.sports_id JOIN verifications v ON sv.verif_id=v.id;
+
+SELECT name, day, month, year, time FROM locations l JOIN loc_verif lv ON l.id = lv.loc_id JOIN verifications v ON lv.verif_id=v.id;
+----------------------------------------------------------------------------------------------------
+* select sports with date as condition
+*
+* select * from sports where strftime('%Y', date) = '2021' and name='Padel'; 
+*
+* -> https://www.sqlite.org/lang_datefunc.html
+* -> https://forum.xojo.com/t/sqlite-select-the-date-where-thedate-year-2016-for-example/33123
+*
+----------------------------------------------------------------------------------------------------
