@@ -131,10 +131,27 @@ def call_sport_city(conn, sport, location):
     cursor.close()
     return (sport_code, location_code)
 
+def club_insert(conn, values, location_code):
+    clubs_check = 'SELECT * FROM clubs WHERE code = ? AND name = ?'
+    insert_club = 'INSERT INTO clubs (code, name, zone, location_id) VALUES (?, ?, ?, ?)'
+    sql_location_id = 'SELECT id FROM locations WHERE code = (?)'
 
+    cursor = conn.cursor()
+    cursor.execute(sql_location_id, location_code)
+    retrieved_list = cursor.fetchall()
+    print(type(retrieved_list))
+    print(retrieved_list)
+    location_id = retrieved_list[0][0]
 
-
-
+    values = values + (location_id,)
+    print(values)
+    cursor.execute(clubs_check, (values[0], values[1]))
+    if not cursor.fetchall():
+        cursor.execute(insert_club, values)
+ 
+    conn.commit()
+    cursor.close()
+    return cursor.lastrowid
 
 
 
@@ -188,7 +205,31 @@ with conn:
 
     sport_city_ids = call_sport_city(conn, ("Padel",), ("Grande Lisboa",))
     print(sport_city_ids)
-    
+
+print(f"sport: {sport_city_ids[0]}")
+driver.get(f"https://www.aircourts.com/site/search?sport={sport_city_ids[0]}&city={sport_city_ids[1]}&date=&start_time=")
+
+time.sleep(5)
+page_source = driver.page_source
+time.sleep(1)
+
+soup = BeautifulSoup(page_source, 'lxml')
+#print(soup)
+clubs = soup.find('div', id = 'court_container').find_all('div', class_ = 'club-container') # list of padel clubs in "Grande Lisboa"
+#courts  soup.find('div', class_ = 'club-container').find_all('div', class_ = 'court-container')
+
+for club in clubs:
+    code = club["data-club-id"] 
+    name = club.find('div', class_ = 'club-info').h2.text
+    rating = club.find("div", class_ = "rating-average").text
+    rat_count = club.find("span", class_ = "rating-count").text
+    zone = club.find("span", class_ = "club-zone").text
+    row_values = (code, name, zone)
+    location_code = (sport_city_ids[1],)
+    club_id = club_insert(conn, row_values, location_code)
+    print(f"Name: {name}, Code:{code}, Rating: {rating}, Rating Count: {rat_count}, Zone: {zone}")
+
+
 
 if conn: 
     conn.close()

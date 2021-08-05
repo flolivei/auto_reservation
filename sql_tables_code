@@ -81,6 +81,15 @@ CREATE TABLE IF NOT EXISTS sports_verif(
   FOREIGN KEY(verif_id) REFERENCES verifications(id)
 );
 
+CREATE TABLE IF NOT EXISTS clubs(
+	id INTEGER PRIMARY KEY,
+  code INTEGER NOT NULL,
+	name TEXT NOT NULL, 
+  zone TEXT NOT NULL,
+  location_id INTEGER NOT NULL, 
+  FOREIGN KEY(location_id) REFERENCES locations(id)
+);
+
 SELECT * FROM club_resource WHERE sport_code = (
   SELECT id FROM sport WHERE name='padel');
 
@@ -107,10 +116,14 @@ SELECT * FROM club_resource WHERE sport_code = (
         if not f_db_name:
             cursor.execute(sql_for_update, ("OFF", sport[1]))
 
-
+//get all sports and verifications
 SELECT name, day, month, year, time FROM sports s JOIN sports_verif sv ON s.id = sv.sports_id JOIN verifications v ON sv.verif_id=v.id;
 
 SELECT name, day, month, year, time FROM locations l JOIN loc_verif lv ON l.id = lv.loc_id JOIN verifications v ON lv.verif_id=v.id;
+
+//get padel clubs together with big location
+SELECT c.code, c.name, c.zone, l.name FROM clubs c JOIN locations l ON c.location_id = l.id; 
+
 ----------------------------------------------------------------------------------------------------
 * select sports with date as condition
 *
