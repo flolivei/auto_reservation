@@ -81,6 +81,14 @@ CREATE TABLE IF NOT EXISTS sports_verif(
   FOREIGN KEY(verif_id) REFERENCES verifications(id)
 );
 
+CREATE TABLE IF NOT EXISTS clubs_verif(
+	id INTEGER PRIMARY KEY NOT NULL,
+  club_id INTEGER NOT NULL,
+  verif_id INTEGER NOT NULL,
+	FOREIGN KEY(club_id) REFERENCES clubs(id),
+  FOREIGN KEY(verif_id) REFERENCES verifications(id)
+);
+
 CREATE TABLE IF NOT EXISTS clubs(
 	id INTEGER PRIMARY KEY,
   code INTEGER NOT NULL,
@@ -122,7 +130,12 @@ SELECT name, day, month, year, time FROM sports s JOIN sports_verif sv ON s.id =
 SELECT name, day, month, year, time FROM locations l JOIN loc_verif lv ON l.id = lv.loc_id JOIN verifications v ON lv.verif_id=v.id;
 
 //get padel clubs together with big location
-SELECT c.code, c.name, c.zone, l.name FROM clubs c JOIN locations l ON c.location_id = l.id; 
+SELECT c.code, c.name, c.zone, l.name, v.day FROM clubs c 
+JOIN locations l ON c.location_id = l.id 
+JOIN clubs_verif cv ON c.id = cv.club_id
+JOIN verifications v ON cv.verif_id = v.id; 
+
+SELECT name zone
 
 ----------------------------------------------------------------------------------------------------
 * select sports with date as condition

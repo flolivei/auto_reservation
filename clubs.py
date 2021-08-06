@@ -118,18 +118,19 @@ def locations_verification(conn, verif_id, values):
 
 def call_sport_city(conn, sport, location):
     sport_select = 'SELECT code FROM sports WHERE name = (?)'
-    location_select = 'SELECT code FROM locations WHERE name = (?)'
+    #location_select = 'SELECT code FROM locations WHERE name = (?)'
+    location_select = 'SELECT code FROM locations'
 
     cursor = conn.cursor()
     cursor.execute(sport_select, sport)
     retrieved_list = cursor.fetchall()
     sport_code = retrieved_list[0][0]
-    cursor.execute(location_select, location)
+    cursor.execute(location_select)
     retrieved_list = cursor.fetchall()
-    location_code = retrieved_list[0][0]
+    #location_code = retrieved_list[0][0]
 
     cursor.close()
-    return (sport_code, location_code)
+    return (sport_code, retrieved_list)
 
 def club_insert(conn, values, location_code):
     clubs_check = 'SELECT * FROM clubs WHERE code = ? AND name = ?'
@@ -149,6 +150,25 @@ def club_insert(conn, values, location_code):
     if not cursor.fetchall():
         cursor.execute(insert_club, values)
  
+    conn.commit()
+    cursor.close()
+    return cursor.lastrowid
+
+def clubs_verification(conn, verif_id, values):
+    check_club = 'SELECT id FROM clubs WHERE code = ? AND name = ?'
+    insert_clubs_verification = 'INSERT INTO clubs_verif (club_id, verif_id) VALUES (?, ?)'
+
+    cursor = conn.cursor()
+    cursor.execute(check_club, (values[0], values[1])) # values[0] = code, values[1] = name
+    retrieved_list = cursor.fetchall()
+
+    if len(retrieved_list) != 1:
+        print('ERROR')
+    else:
+        club_id = retrieved_list[0][0]
+        ids_to_insert = (club_id, verif_id)
+        cursor = conn.cursor()
+        cursor.execute(insert_clubs_verification, ids_to_insert)   
     conn.commit()
     cursor.close()
     return cursor.lastrowid
@@ -207,29 +227,31 @@ with conn:
     print(sport_city_ids)
 
 print(f"sport: {sport_city_ids[0]}")
-driver.get(f"https://www.aircourts.com/site/search?sport={sport_city_ids[0]}&city={sport_city_ids[1]}&date=&start_time=")
+for city in sport_city_ids[1]:
+    driver.get(f"https://www.aircourts.com/site/search?sport={sport_city_ids[0]}&city={city[0]}&date=&start_time=")
+    #driver.get(f"https://www.aircourts.com/site/search?sport=4&city=29&date=&start_time=")
+    time.sleep(5)
+    page_source = driver.page_source
+    time.sleep(1)
 
-time.sleep(5)
-page_source = driver.page_source
-time.sleep(1)
+    soup = BeautifulSoup(page_source, 'lxml')
 
-soup = BeautifulSoup(page_source, 'lxml')
-#print(soup)
-clubs = soup.find('div', id = 'court_container').find_all('div', class_ = 'club-container') # list of padel clubs in "Grande Lisboa"
-#courts  soup.find('div', class_ = 'club-container').find_all('div', class_ = 'court-container')
+    if soup.find('div', id = 'empty-text') is not None: #if  clubs in the c
+        print(f'Cidade {city[0]}, com campos')
+        clubs = soup.find('div', id = 'court_container').find_all('div', class_ = 'club-container') # list of padel clubs in "Grande Lisboa"
+        #courts  soup.find('div', class_ = 'club-container').find_all('div', class_ = 'court-container')
 
-for club in clubs:
-    code = club["data-club-id"] 
-    name = club.find('div', class_ = 'club-info').h2.text
-    rating = club.find("div", class_ = "rating-average").text
-    rat_count = club.find("span", class_ = "rating-count").text
-    zone = club.find("span", class_ = "club-zone").text
-    row_values = (code, name, zone)
-    location_code = (sport_city_ids[1],)
-    club_id = club_insert(conn, row_values, location_code)
-    print(f"Name: {name}, Code:{code}, Rating: {rating}, Rating Count: {rat_count}, Zone: {zone}")
-
-
+        for club in clubs:
+            code = club["data-club-id"] 
+            name = club.find('div', class_ = 'club-info').h2.text
+            rating = club.find("div", class_ = "rating-average").text
+            rat_count = club.find("span", class_ = "rating-count").text
+            zone = club.find("span", class_ = "club-zone").text
+            row_values = (code, name, zone)
+            location_code = (city[0],)
+            club_id = club_insert(conn, row_values, location_code)
+            clubs_verification(conn, verif_id, row_values)
+            print(f"Name: {name}, Code: {code}, Rating: {rating}, Rating Count: {rat_count}, Zone: {zone}")         
 
 if conn: 
     conn.close()
