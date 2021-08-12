@@ -13,4 +13,4 @@ clubs = soup.find("div", class_ = "court_container").find_all("div", class_ = "c
 for club in clubs: 
     name = club.find('div', class_ = 'club-info').h2.text
     print(name)
-    print(name)
+    print(name)ç
