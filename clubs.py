@@ -1,17 +1,24 @@
 from re import I
-from sqlite3.dbapi2 import Error
-from selenium.webdriver import Chrome
+import psycopg2
+from psycopg2 import Error
+#from sqlite3.dbapi2 import Error
+from selenium import webdriver
 from bs4 import BeautifulSoup
 from selenium.webdriver.support.wait import WebDriverWait
 from selenium.webdriver.common.by import By
 #from datetime import datetime
-import requests
+#import requests
 import datetime
 import time
 import unidecode
-import sqlite3
+#import sqlite3
+import os
+import json
 
-def create_connection(db_file):
+with open("crd.json") as f:
+    data = json.load(f)
+
+def create_connection():
     """ create a database connection to the SQLite database 
         specified by db_file 
     :param db_file: database file
@@ -19,11 +26,24 @@ def create_connection(db_file):
     """
     conn = None
     try: 
-        conn = sqlite3.connect(db_file)
-        print(sqlite3.version)
+        '''
+        # Connect to an existing database
+        conn = psycopg2.connect(user="postgres",
+                                  password="ucrsah",
+                                  host="localhost",
+                                  port="5432",
+                                  database=db_file)
+        '''
+        # Connect to Heroku database
+        conn = psycopg2.connect(user=data["user"],
+                                  password=data["pass"],
+                                  host=data["host"],
+                                  port=data["port"],
+                                  database=data["db"])                                  
+
         return conn
-    except Error as e:
-        print(e)
+    except (Exception, Error) as error:
+        print("Error while connecting to PostgreSQL", error)
     
     return conn
 
@@ -33,8 +53,8 @@ def sport_insert(conn, values):
     :param sport:
     :return: sport id
     """
-    sport_check = 'SELECT * FROM sports WHERE code = ? AND name = ?'
-    insert_sport = '''INSERT INTO sports (code, name) VALUES (?, ?)'''  
+    sport_check = "SELECT * FROM sports WHERE code = %s AND name = %s"
+    insert_sport = "INSERT INTO sports (code, name) VALUES (%s, %s)"
     
     cursor = conn.cursor()
     cursor.execute(sport_check, values)
@@ -51,8 +71,8 @@ def location_insert(conn, values):
     :param sport:
     :return: sport id
     """
-    locations_check = 'SELECT * FROM locations WHERE code = ? AND name = ?'
-    insert_location = '''INSERT INTO locations (code, name) VALUES (?, ?)'''  
+    locations_check = "SELECT * FROM locations WHERE code = %s AND name = %s"
+    insert_location = "INSERT INTO locations (code, name) VALUES (%s, %s)"  
     
     cursor = conn.cursor()
     cursor.execute(locations_check, values)
@@ -64,21 +84,22 @@ def location_insert(conn, values):
     return cursor.lastrowid
 
 def verification_insert(conn, date):
-    insert_verification = 'INSERT INTO verifications (day, month, year, time) VALUES (?, ?, ?, ?)'
+    insert_verification = "INSERT INTO verifications (day, month, year, time) VALUES (%s, %s, %s, %s) RETURNING id"
     day = date.day
     month = date.month
     year = date.year
-    time = f'{date.hour}:{date.minute}:{date.microsecond}'
+    time = f'{date.hour}:{date.minute}:{date.second}'
     values = (day, month, year, time)
     cursor = conn.cursor()
     cursor.execute(insert_verification, values)
     conn.commit()
+    insert_id = cursor.fetchone()
     cursor.close()
-    return cursor.lastrowid
+    return insert_id
 
 def sports_verification(conn, verif_id, values):
-    check_sport = 'SELECT id FROM sports WHERE code = ? AND name = ?'
-    insert_sports_verification = 'INSERT INTO sports_verif (sports_id, verif_id) VALUES (?, ?)'
+    check_sport = "SELECT id FROM sports WHERE code = %s AND name = %s"
+    insert_sports_verification = "INSERT INTO sports_verif (sports_id, verif_id) VALUES (%s, %s)"
 
     cursor = conn.cursor()
     cursor.execute(check_sport, values)
@@ -97,8 +118,8 @@ def sports_verification(conn, verif_id, values):
     return cursor.lastrowid
 
 def locations_verification(conn, verif_id, values):
-    check_location = 'SELECT id FROM locations WHERE code = ? AND name = ?'
-    insert_locations_verification = 'INSERT INTO loc_verif (loc_id, verif_id) VALUES (?, ?)'
+    check_location = "SELECT id FROM locations WHERE code = %s AND name = %s"
+    insert_locations_verification = "INSERT INTO loc_verif (loc_id, verif_id) VALUES (%s, %s)"
 
     cursor = conn.cursor()
     cursor.execute(check_location, values)
@@ -117,7 +138,7 @@ def locations_verification(conn, verif_id, values):
     return cursor.lastrowid
 
 def call_sport_city(conn, sport, location):
-    sport_select = 'SELECT code FROM sports WHERE name = (?)'
+    sport_select = "SELECT code FROM sports WHERE name = (%s)"
     #location_select = 'SELECT code FROM locations WHERE name = (?)'
     location_select = 'SELECT code FROM locations'
 
@@ -133,9 +154,9 @@ def call_sport_city(conn, sport, location):
     return (sport_code, retrieved_list)
 
 def club_insert(conn, values, location_code):
-    clubs_check = 'SELECT * FROM clubs WHERE code = ? AND name = ?'
-    insert_club = 'INSERT INTO clubs (code, name, zone, location_id) VALUES (?, ?, ?, ?)'
-    sql_location_id = 'SELECT id FROM locations WHERE code = (?)'
+    clubs_check = "SELECT * FROM clubs WHERE code = %s AND name = %s"
+    insert_club = "INSERT INTO clubs (code, name, zone, location_id) VALUES (%s, %s, %s, %s)"
+    sql_location_id = "SELECT id FROM locations WHERE code = (%s)"
 
     cursor = conn.cursor()
     cursor.execute(sql_location_id, location_code)
@@ -155,8 +176,8 @@ def club_insert(conn, values, location_code):
     return cursor.lastrowid
 
 def clubs_verification(conn, verif_id, values):
-    check_club = 'SELECT id FROM clubs WHERE code = ? AND name = ?'
-    insert_clubs_verification = 'INSERT INTO clubs_verif (club_id, verif_id) VALUES (?, ?)'
+    check_club = "SELECT id FROM clubs WHERE code = %s AND name = %s"
+    insert_clubs_verification = "INSERT INTO clubs_verif (club_id, verif_id) VALUES (%s, %s)"
 
     cursor = conn.cursor()
     cursor.execute(check_club, (values[0], values[1])) # values[0] = code, values[1] = name
@@ -173,9 +194,18 @@ def clubs_verification(conn, verif_id, values):
     cursor.close()
     return cursor.lastrowid
 
+"""
+chrome_options = webdriver.ChromeOptions()
+chrome_options.binary_location = os.environ.get("GOOGLE_CHROME_BIN")
+chrome_options.add_argument("--headless")
+chrome_options.add_argument("--disable-dev-shm-usage")
+chrome_options.add_argument("--no-sandbox")
+driver = webdriver.Chrome(executable_path=os.environ.get("CHROMEDRIVER_PATH"), chrome_options=chrome_options)
+"""
 
 
-driver = Chrome(executable_path='C:\\Users\\flolivei\\Documents\\chromedriver.exe')
+#driver = Chrome(executable_path='C:\\Users\\flolivei\\Documents\\chromedriver.exe')
+driver = webdriver.Chrome(executable_path="C:\\Users\\flavi\\Documents\\chromedriver.exe")
 driver.get("https://www.aircourts.com/index.php/")
 location = WebDriverWait(driver, 10).until(lambda x: x.find_element(By.ID, "location"))
 
@@ -195,11 +225,12 @@ for sport_extract in sports_extract:
     
 print(list_code_sport)
 
+#local catabase
+#database = "sports_stat"
 
-database = r"C:\Users\flolivei\Documents\GitHub\auto_reservation\sports_freq.db"
 
 # creates a database connection
-conn = create_connection(database)
+conn = create_connection()
 
 
 list_for_test = [{'code': '3', 'sport': 'Ténis'}, {'code': '1', 'sport': 'Futebol 5'}, {'code': '6', 'sport': 'Futsal'}, {'code': '2', 'sport': 'Futebol 7'}, {'code': '12', 'sport': 'Padbol'}, {'code': '14', 'sport': 'Squash'}, {'code': '8', 'sport': 'Basquetebol'}, {'code': '9', 'sport': 'Andebol'}, {'code': '10', 'sport': 'Voleibol'}, {'code': '22', 'sport': 'Teqball'}, {'code': '5', 'sport': 'Futebol 11'}, {'code': '13', 'sport': 'Bubble Football'}, {'code': '15', 'sport': 'Rugby'}, {'code': '17', 'sport': 'Futebol 5 Tabelas'}, {'code': '18', 'sport': 'Golf'}, {'code': '19', 'sport': 'Ténis de Praia'}, {'code': 
